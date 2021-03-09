@@ -38,15 +38,14 @@ function configureRoutes(app) {
                 data.last20 = rows;
                 console.dir(data);
             });
-            // db.all(`SELECT date, duration 
-            //         FROM exercise_events
-            //         ORDER BY date DESC
-            //         LIMIT ?`, [20], (err, rows) => {
-            //     if (err) throw err;
-            //     console.log(rows);
-            //     data.duration = rows;
-            //     console.dir(data);
-            // });
+            db.all(`SELECT exercise_type_id, description, COUNT(exercise_events.id) 
+                    FROM exercise_events
+                    INNER JOIN exercise_types
+                        ON exercise_types.id = exercise_events.exercise_type_id
+                    GROUP BY exercise_type_id`, [], (err, rows) => {
+                if (err) throw err;
+                data.workoutTypeFrequencies = rows;
+            });
         });
         db.close(err => {
             if (err) console.error(err.message);
