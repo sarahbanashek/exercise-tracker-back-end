@@ -38,13 +38,21 @@ function configureRoutes(app) {
                 data.last20 = rows;
                 console.dir(data);
             });
-            db.all(`SELECT exercise_type_id, description, COUNT(exercise_events.id) 
+            db.all(`SELECT description, COUNT(exercise_events.id) 
                     FROM exercise_events
                     INNER JOIN exercise_types
                         ON exercise_types.id = exercise_events.exercise_type_id
-                    GROUP BY exercise_type_id`, [], (err, rows) => {
+                    GROUP BY description`, [], (err, rows) => {
                 if (err) throw err;
                 data.workoutTypeFrequencies = rows;
+            });
+            db.all(`SELECT description, SUM(duration) 
+                    FROM exercise_events
+                    INNER JOIN exercise_types
+                        ON exercise_types.id = exercise_events.exercise_type_id
+                    GROUP BY description`, [], (err, rows) => {
+                if (err) throw err;
+                data.workoutTypeTimeSpent = rows;
             });
         });
         db.close(err => {
