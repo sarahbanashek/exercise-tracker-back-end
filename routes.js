@@ -36,7 +36,6 @@ function configureRoutes(app) {
                     LIMIT ?`, [20], (err, rows) => {
                 if (err) throw err;
                 data.last20 = rows;
-                console.dir(data);
             });
             db.all(`SELECT description, COUNT(exercise_events.id) 
                     FROM exercise_events
@@ -68,7 +67,6 @@ function configureRoutes(app) {
                         ${parseInt(req.body.duration, 10)}, 
                         ${req.body.heartRate ? parseInt(req.body.heartRate, 10) : null},
                         ${parseInt(req.body.exerciseType, 10)})`
-        console.log(req.body.date);
         let db = new sqlite3.Database('./app.db', err => {
             if (err) console.error(err.message);
         });
@@ -80,6 +78,53 @@ function configureRoutes(app) {
         });
         res.json({success: true});
     });
+
+    app.route('/edit-exercise-types')
+        .get((_, res) => {
+            let db = new sqlite3.Database('./app.db', err => {
+                if (err) console.error(err.message);
+                console.log('connected to database');
+            });
+            db.all(`SELECT id, description
+                        FROM exercise_types
+                        WHERE id NOT IN (SELECT DISTINCT exercise_type_id
+                                        FROM exercise_events)`, [], (err, rows) => {
+                            if (err) throw err;
+                            res.json(rows);
+                });
+            db.close(err => {
+                if (err) console.error(err.message);
+                console.log('database closing');
+            });
+        })
+        .post((req, res) => {
+            let db = new sqlite3.Database('./app.db', err => {
+                if (err) console.error(err.message);
+            });
+            if (req.body.toAdd) {
+                const toAdd = req.body.toAdd.split(/,\s*/g);
+                const placeholders = toAdd.map(type => '(?)').join(', ');
+                db.run(`INSERT INTO exercise_types (description)
+                        VALUES ${placeholders}`, toAdd, err => {
+                            if (err) throw err;
+                        });
+            }
+            if (req.body.toRemove) {
+                const toRemove = req.body.toRemove.map(type => parseInt(type, 10));
+                console.log(typeof toRemove[0]);
+                toRemove.forEach(id => {
+                    db.run(`DELETE FROM exercise_types
+                            WHERE id = ${id}`, [], err => {
+                                if (err) throw err;
+                                console.log(`deleting id: ${id}`);
+                            })
+                });
+            }
+            db.close(err => {
+                if (err) console.error(err.message);
+            });
+            res.json({success: true});
+        });
 }
 
 module.exports = { configureRoutes };
