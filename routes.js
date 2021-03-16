@@ -110,14 +110,11 @@ function configureRoutes(app) {
                         });
             }
             if (req.body.toRemove) {
-                const toRemove = req.body.toRemove.map(type => parseInt(type, 10));
-                console.log(typeof toRemove[0]);
-                toRemove.forEach(id => {
-                    db.run(`DELETE FROM exercise_types
-                            WHERE id = ${id}`, [], err => {
-                                if (err) throw err;
-                                console.log(`deleting id: ${id}`);
-                            })
+                const idsToRemove = `(${req.body.toRemove.join(', ')})`;
+                db.run(`DELETE FROM exercise_types
+                        WHERE id IN ${idsToRemove}`, [], err => {
+                            if (err) throw err;
+                            console.log(`deleting ids: ${idsToRemove}`);
                 });
             }
             db.close(err => {
@@ -125,6 +122,41 @@ function configureRoutes(app) {
             });
             res.json({success: true});
         });
+
+        app.route('/edit-exercise-events')
+            .get((_, res) => {
+                let db = new sqlite3.Database('./app.db', err => {
+                    if (err) console.error(err.message);
+                });
+                db.all(`SELECT exercise_events.id, date, duration, heart_rate, description
+                        FROM exercise_events
+                        INNER JOIN exercise_types
+                            ON exercise_types.id = exercise_events.exercise_type_id
+                        ORDER BY date DESC`, [], (err, rows) => {
+                    if (err) throw err;
+                    res.json(rows);
+                    console.dir(rows);
+                });
+                db.close(err => {
+                    if (err) console.error(err.message);
+                });
+            })
+            .post((req, res) => {
+                console.log(req.body);
+                const idsToDelete = `(${req.body.join(', ')})`;
+                let db = new sqlite3.Database('./app.db', err => {
+                    if (err) console.error(err.message);
+                });
+                db.run(`DELETE FROM exercise_events
+                        WHERE id IN ${idsToDelete}`, [], err => {
+                            if (err) throw err;
+                            console.log(`deleting ids: ${idsToDelete}`);
+                });
+                db.close(err => {
+                    if (err) console.error(err.message);
+                });
+                res.json({success: true});
+            })
 }
 
 module.exports = { configureRoutes };
