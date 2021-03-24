@@ -43,7 +43,6 @@ function configureRoutes(app) {
                     FROM exercise_events
                     WHERE date < ?`, [sevenDaysAgo], (err, value) => {
                 if (err) throw err;
-                console.log(value);
                 data.untilLastWeekHeartRateAvg = value['round(avg(heart_rate), 1)'];
             });
             db.all(`SELECT date, duration, heart_rate, description 
@@ -63,6 +62,10 @@ function configureRoutes(app) {
                 if (err) throw err;
                 data.workoutTypeFrequencies = rows;
             });
+            db.get('SELECT COUNT(exercise_events.id) FROM exercise_events', [], (err, value) => {
+                if (err) throw err;
+                data.totalNumOfWorkouts = value;
+            })
             db.all(`SELECT description, SUM(duration) 
                     FROM exercise_events
                     INNER JOIN exercise_types
@@ -70,6 +73,10 @@ function configureRoutes(app) {
                     GROUP BY description`, [], (err, rows) => {
                 if (err) throw err;
                 data.workoutTypeTimeSpent = rows;
+            });
+            db.get('SELECT SUM(duration) FROM exercise_events', [], (err, value) => {
+                if (err) throw err;
+                data.totalTimeAllWorkouts = value;
             });
         });
         db.close(err => {
