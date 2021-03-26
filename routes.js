@@ -1,14 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
 
-// let db = new sqlite3.Database('./app.db', err => {
-//     if (err) console.error(err.message);
-//     console.log('connected to database');
-// });
-// db.close(err => {
-//     if (err) console.error(err.message);
-//     console.log('database closing');
-// });
-
 function configureRoutes(app) {
     app.get('/', (_, res) => {
         let today = new Date();
@@ -21,10 +12,6 @@ function configureRoutes(app) {
             if (err) console.error(err.message);
         });
         db.parallelize(() => {
-            db.all('SELECT * FROM exercise_types', [], (err, rows) => {
-                if (err) throw err;
-                data.exerciseTypes = rows;
-            });
             db.get('SELECT round(avg(duration), 1) FROM exercise_events', [], (err, value) => {
                 if (err) throw err;
                 data.durationAvg = value['round(avg(duration), 1)'];
@@ -85,7 +72,28 @@ function configureRoutes(app) {
         });
     });
 
-    app.post('/add-exercise-event', (req, res) => {
+    app.route('/add-exercise-event')
+        .get((_, res) => {
+            let db = new sqlite3.Database('./app.db', err => {
+                if (err) console.error(err.message);
+                console.log('connected to database');
+            });
+            db.all(`SELECT exercise_types.id, description
+                    FROM exercise_events 
+                    INNER JOIN exercise_types 
+                        ON exercise_types.id = exercise_events.exercise_type_id 
+                    GROUP BY description 
+                    ORDER BY count(description) desc;`, [], (err, rows) => {
+                if (err) throw err;
+                console.log(rows);
+                res.json(rows);
+            });
+            db.close(err => {
+                if (err) console.error(err.message);
+                console.log('database closing');
+            });
+        })
+        .post((req, res) => {
         console.log(req.body);
         const sql = `INSERT INTO exercise_events (date, duration, heart_rate, exercise_type_id)
                     VALUES ('${req.body.date}', 
@@ -114,8 +122,8 @@ function configureRoutes(app) {
                         FROM exercise_types
                         WHERE id NOT IN (SELECT DISTINCT exercise_type_id
                                         FROM exercise_events)`, [], (err, rows) => {
-                            if (err) throw err;
-                            res.json(rows);
+                if (err) throw err;
+                res.json(rows);
                 });
             db.close(err => {
                 if (err) console.error(err.message);
@@ -131,15 +139,15 @@ function configureRoutes(app) {
                 const placeholders = toAdd.map(type => '(?)').join(', ');
                 db.run(`INSERT INTO exercise_types (description)
                         VALUES ${placeholders}`, toAdd, err => {
-                            if (err) throw err;
+                    if (err) throw err;
                         });
             }
             if (req.body.toRemove) {
                 const idsToRemove = `(${req.body.toRemove.join(', ')})`;
                 db.run(`DELETE FROM exercise_types
                         WHERE id IN ${idsToRemove}`, [], err => {
-                            if (err) throw err;
-                            console.log(`deleting ids: ${idsToRemove}`);
+                    if (err) throw err;
+                    console.log(`deleting ids: ${idsToRemove}`);
                 });
             }
             db.close(err => {
@@ -160,7 +168,6 @@ function configureRoutes(app) {
                         ORDER BY date DESC`, [], (err, rows) => {
                     if (err) throw err;
                     res.json(rows);
-                    console.dir(rows);
                 });
                 db.close(err => {
                     if (err) console.error(err.message);
@@ -174,8 +181,7 @@ function configureRoutes(app) {
                 });
                 db.run(`DELETE FROM exercise_events
                         WHERE id IN ${idsToDelete}`, [], err => {
-                            if (err) throw err;
-                            console.log(`deleting ids: ${idsToDelete}`);
+                    if (err) throw err;
                 });
                 db.close(err => {
                     if (err) console.error(err.message);
