@@ -52,7 +52,7 @@ function configureRoutes(app) {
             db.get('SELECT COUNT(exercise_events.id) FROM exercise_events', [], (err, value) => {
                 if (err) throw err;
                 data.totalNumOfWorkouts = value;
-            })
+            });
             db.all(`SELECT description, SUM(duration) 
                     FROM exercise_events
                     INNER JOIN exercise_types
@@ -79,13 +79,12 @@ function configureRoutes(app) {
                 console.log('connected to database');
             });
             db.all(`SELECT exercise_types.id, description
-                    FROM exercise_events 
-                    INNER JOIN exercise_types 
+                    FROM exercise_types 
+                    LEFT JOIN exercise_events 
                         ON exercise_types.id = exercise_events.exercise_type_id 
                     GROUP BY description 
-                    ORDER BY count(description) desc;`, [], (err, rows) => {
+                    ORDER BY count(exercise_events.exercise_type_id) desc;`, [], (err, rows) => {
                 if (err) throw err;
-                console.log(rows);
                 res.json(rows);
             });
             db.close(err => {
@@ -94,7 +93,6 @@ function configureRoutes(app) {
             });
         })
         .post((req, res) => {
-        console.log(req.body);
         const sql = `INSERT INTO exercise_events (date, duration, heart_rate, exercise_type_id)
                     VALUES ('${req.body.date}', 
                         ${parseInt(req.body.duration, 10)}, 
@@ -147,7 +145,6 @@ function configureRoutes(app) {
                 db.run(`DELETE FROM exercise_types
                         WHERE id IN ${idsToRemove}`, [], err => {
                     if (err) throw err;
-                    console.log(`deleting ids: ${idsToRemove}`);
                 });
             }
             db.close(err => {
@@ -174,7 +171,6 @@ function configureRoutes(app) {
                 });
             })
             .post((req, res) => {
-                console.log(req.body);
                 const idsToDelete = `(${req.body.join(', ')})`;
                 let db = new sqlite3.Database('./app.db', err => {
                     if (err) console.error(err.message);
