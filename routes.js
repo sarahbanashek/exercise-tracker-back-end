@@ -137,7 +137,7 @@ function configureRoutes(app) {
                 if (err) console.error(err.message);
             });
             if (req.body.toAdd) {
-                const toAdd = req.body.toAdd.split(/,\s*/g);
+                const toAdd = req.body.toAdd;
                 const placeholders = toAdd.map(type => '(?)').join(', ');
                 db.run(`INSERT INTO exercise_types (description)
                         VALUES ${placeholders}`, toAdd, err => {
@@ -145,6 +145,7 @@ function configureRoutes(app) {
                         });
             }
             if (req.body.toRemove) {
+                console.log(req.body.toRemove);
                 const idsToRemove = `(${req.body.toRemove.join(', ')})`;
                 db.run(`DELETE FROM exercise_types
                         WHERE id IN ${idsToRemove}`, [], err => {
