@@ -47,11 +47,13 @@ function configureRoutes(app) {
                         ON exercise_types.id = exercise_events.exercise_type_id
                     GROUP BY description`, [], (err, rows) => {
                 if (err) throw err;
-                data.workoutTypeFrequencies = rows;
+                data.workoutTypeFrequencies = rows.map(obj => {
+                    return { description: obj.description, totalCount: obj['COUNT(exercise_events.id)'] }
+                });
             });
             db.get('SELECT COUNT(exercise_events.id) FROM exercise_events', [], (err, value) => {
                 if (err) throw err;
-                data.totalNumOfWorkouts = value;
+                data.totalNumOfWorkouts = value['COUNT(exercise_events.id)'];
             });
             db.all(`SELECT description, SUM(duration) 
                     FROM exercise_events
@@ -59,11 +61,13 @@ function configureRoutes(app) {
                         ON exercise_types.id = exercise_events.exercise_type_id
                     GROUP BY description`, [], (err, rows) => {
                 if (err) throw err;
-                data.workoutTypeTimeSpent = rows;
+                data.workoutTypeTimeSpent = rows.map(obj => {
+                    return { description: obj.description, totalTime: obj['SUM(duration)'] }
+                });
             });
             db.get('SELECT SUM(duration) FROM exercise_events', [], (err, value) => {
                 if (err) throw err;
-                data.totalTimeAllWorkouts = value;
+                data.totalTimeAllWorkouts = value['SUM(duration)'];
             });
         });
         db.close(err => {
